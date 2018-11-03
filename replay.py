@@ -96,7 +96,6 @@ def replay_packets(packets, rate, loop=False):
         blink_lights(packet_stats, rate)
         time.sleep(1)
             
-            #print(ip.IP(binascii.unhexlify(frame.payload)).header)
 
 
 
@@ -117,19 +116,3 @@ if __name__ == '__main__':
     while True:
         replay_pcap(args.file, args.rate)
 
-    """
-    replay = pcap.open_offline(name=None, promisc=True, immediate=True, timeout_ms=50)
-    addr = lambda pkt, offset: '.'.join(str(pkt[i]) for i in range(offset, offset + 4))
-    print(dir(sniffer))
-    for ts, pkt in sniffer:
-            protoversion = int(pkt[sniffer.dloff]) // 16 
-            if protoversion == 4:
-                header_words = pkt[sniffer.dloff] - (16 * protoversion)
-                header_octets = 4*header_words
-                header = pkt[sniffer.dloff:sniffer.dloff+header_octets]
-                header_info = parse_ip4_header(header)
-                if header_info["src_addr"] not in filtered_src and header_info["dst_addr"] not in filtered_dst:
-                    print(header_info)
-            else:
-                print("IP protocol version {}".format(protoversion))
-    """
