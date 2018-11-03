@@ -14,8 +14,8 @@ class L3(Enum):
     IP6 = 'IPv6'
 
 class LED(IntEnum):
-    red = 23,
-    white = 24,
+    red = 16,
+    white = 12,
     blue = 18
 
 ethertypes = {2048: L3.IP4, # 0x0800
@@ -32,6 +32,7 @@ self_ip4 = "10.2.0.133"
 def GPIO_setup():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(LED.red, GPIO.OUT, initial = 0)
+    GPIO.setup(LED.white, GPIO.OUT, initial = 0)
 
 
 def ip4addr(octets):
@@ -51,13 +52,6 @@ def parse_ip4_header(header_hex):
             "protocol": protonums.get(protonum, "OTHER - {}".format(protonum))}
 
 
-def blink_eyes(packet_stats, rate):
-    print("rate {}, {} packets".format(rate, len(packet_stats)))
-    max_v = 3.3
-    pps = len(packet_stats) / rate
-    min_pps = 1.0
-    print("packets per second: {}".format(pps))
-    GPIO.output(LED.red.value, pps >= min_pps)
 
 def count(it):
     val = 0
@@ -65,18 +59,18 @@ def count(it):
         val += 1
     return val
 
+def blink_proto_lights(protoname, packet_stats, rate, led, min_rate):
+    proto = count(p for p in packet_stats if p["protocol"] == protoname)
+    pps = proto / rate
+    print("{} packets per second: {} %".format(protoname, 100.0 * pps))
+    GPIO.output(led.value, pps > min_rate)
 
-def blink_tcp_lights(packet_stats, rate):
-    tcp = count(p for p in packet_stats if p["protocol"] == "TCP")
-    pps = tcp / rate
-    min_pps = 0.6
-    print("packets per second: {}".format(pps))
-    GPIO.output(LED.red.value, pps >= min_pps)
+
 
 
 def blink_lights(packet_stats, rate):
-    #blink_eyes(packet_stats, rate)
-    blink_tcp_lights(packet_stats, rate)
+    blink_proto_lights("TCP", packet_stats, rate, LED.white, min_rate=0.5)
+    blink_proto_lights("UDP", packet_stats, rate, LED.red, min_rate=0.0)
 
 
 
@@ -91,9 +85,10 @@ def replay_packets(packets, rate, loop=False):
             frame = ethernet.Ethernet(p.raw())
             ethertype = ethertypes.get(frame.type)
             if ethertype is None:
-                print(p.raw())
+                pass
             elif ethertype == L3.IP4:
                 packet_info = parse_ip4_header(frame.payload)
+                print(packet_info)
                 packet_stats.append(packet_info)
             else:
                 print(ethertype)
@@ -119,7 +114,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     GPIO_setup()
 
-    replay_pcap(args.file, args.rate)
+    while True:
+        replay_pcap(args.file, args.rate)
 
     """
     replay = pcap.open_offline(name=None, promisc=True, immediate=True, timeout_ms=50)
